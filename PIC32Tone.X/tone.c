@@ -471,6 +471,17 @@ void toneT2(const int freq)
 }
 
 
+/* PlayNote --- play a note */
+
+static void PlayNote(const int freq, const int ms)
+{
+    toneT2(freq);
+    delayms(ms - 50);
+    toneT2(0);
+    delayms(50);
+}
+
+
 /* PPS_begin --- map Peripheral Pin Select to suit dev board */
 
 static void PPS_begin(void)
@@ -676,25 +687,10 @@ void main(void)
         LED5 = 1;
         
         // Bar 1
-        toneT2(E5);
-        delayms(450);
-        toneT2(0);
-        delayms(50);
-        
-        toneT2(E5);
-        delayms(450);
-        toneT2(0);
-        delayms(50);
-        
-        toneT2(F5);
-        delayms(450);
-        toneT2(0);
-        delayms(50);
-        
-        toneT2(G5);
-        delayms(450);
-        toneT2(0);
-        delayms(50);
+        PlayNote(E5, 500);
+        PlayNote(E5, 500);
+        PlayNote(F5, 500);
+        PlayNote(G5, 500);
         
         LED1 = 1;
         LED2 = 0;
@@ -703,25 +699,10 @@ void main(void)
         LED5 = 1;
         
         // Bar 2
-        toneT2(G5);
-        delayms(450);
-        toneT2(0);
-        delayms(50);
-        
-        toneT2(F5);
-        delayms(450);
-        toneT2(0);
-        delayms(50);
-        
-        toneT2(E5);
-        delayms(450);
-        toneT2(0);
-        delayms(50);
-        
-        toneT2(D5);
-        delayms(450);
-        toneT2(0);
-        delayms(50);
+        PlayNote(G5, 500);
+        PlayNote(F5, 500);
+        PlayNote(E5, 500);
+        PlayNote(D5, 500);
         
         LED1 = 1;
         LED2 = 1;
@@ -730,25 +711,10 @@ void main(void)
         LED5 = 1;
         
         // Bar 3
-        toneT2(C5);
-        delayms(450);
-        toneT2(0);
-        delayms(50);
-        
-        toneT2(C5);
-        delayms(450);
-        toneT2(0);
-        delayms(50);
-        
-        toneT2(D5);
-        delayms(450);
-        toneT2(0);
-        delayms(50);
-        
-        toneT2(E5);
-        delayms(450);
-        toneT2(0);
-        delayms(50);
+        PlayNote(C5, 500);
+        PlayNote(C5, 500);
+        PlayNote(D5, 500);
+        PlayNote(E5, 500);
         
         LED1 = 1;
         LED2 = 1;
@@ -757,20 +723,9 @@ void main(void)
         LED5 = 1;
         
         // Bar 4
-        toneT2(E5);
-        delayms(700);
-        toneT2(0);
-        delayms(50);
-        
-        toneT2(D5);
-        delayms(200);
-        toneT2(0);
-        delayms(50);
-        
-        toneT2(D5);
-        delayms(950);
-        toneT2(0);
-        delayms(50);
+        PlayNote(E5, 750);
+        PlayNote(D5, 250);
+        PlayNote(D5, 1000);
         
         LED1 = 1;
         LED2 = 1;
