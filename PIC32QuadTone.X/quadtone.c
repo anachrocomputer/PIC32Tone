@@ -54,6 +54,11 @@
 #define E5 (659)
 #define F5 (698)
 #define G5 (784)
+#define B4 (494)
+#define A4 (440)
+#define G4 (392)
+#define E4 (330)
+#define C4 (262)
 
 #define LED1        LATEbits.LATE6
 #define LED2        LATEbits.LATE7
@@ -97,6 +102,8 @@ struct UART_BUFFER
 static struct UART_BUFFER U4Buf;
 
 volatile uint32_t MilliSeconds = 0;
+
+volatile uint32_t StopTime[4];
 
 volatile int SPINbytes = 0;
 volatile uint8_t *SPIBuf = NULL;
@@ -144,28 +151,64 @@ void __ISR(_TIMER_1_VECTOR, ipl2) Timer1Handler(void)
 
 void __ISR(_TIMER_2_VECTOR, ipl2) Timer2Handler(void) 
 {
-    LATDINV = _LATD_LATD0_MASK; // Toggle RD0 on pin 72, P7 pin 14 (tone 1)
+    if (MilliSeconds >= StopTime[0])
+    {
+        StopTime[0] = 0;
+        LATDCLR = _LATD_LATD0_MASK; // Zero RD0 on pin 72, P7 pin 14 (tone 1)
+        IEC0CLR = _IEC0_T2IE_MASK;  // Disable Timer 2 interrupt
+    }
+    else
+    {
+        LATDINV = _LATD_LATD0_MASK; // Toggle RD0 on pin 72, P7 pin 14 (tone 1)
+    }
     
     IFS0CLR = _IFS0_T2IF_MASK;  // Clear Timer 2 interrupt flag
 }
 
 void __ISR(_TIMER_3_VECTOR, ipl2) Timer3Handler(void) 
 {
-    LATDINV = _LATD_LATD8_MASK; // Toggle RD8 on pin 68, P7 pin 10 (tone 2)
+    if (MilliSeconds >= StopTime[1])
+    {
+        StopTime[1] = 0;
+        LATDCLR = _LATD_LATD8_MASK; // Zero RD8 on pin 68, P7 pin 10 (tone 2)
+        IEC0CLR = _IEC0_T3IE_MASK;  // Disable Timer 3 interrupt
+    }
+    else
+    {
+        LATDINV = _LATD_LATD8_MASK; // Toggle RD8 on pin 68, P7 pin 10 (tone 2)
+    }
     
     IFS0CLR = _IFS0_T3IF_MASK;  // Clear Timer 3 interrupt flag
 }
 
 void __ISR(_TIMER_4_VECTOR, ipl2) Timer4Handler(void) 
 {
-    LATAINV = _LATA_LATA4_MASK; // Toggle RA4 on pin 60, P7 pin 6 (tone 3)
+    if (MilliSeconds >= StopTime[2])
+    {
+        StopTime[2] = 0;
+        LATACLR = _LATA_LATA4_MASK; // Zero RA4 on pin 60, P7 pin 6 (tone 3)
+        IEC0CLR = _IEC0_T4IE_MASK;  // Disable Timer 4 interrupt
+    }
+    else
+    {
+        LATAINV = _LATA_LATA4_MASK; // Toggle RA4 on pin 60, P7 pin 6 (tone 3)
+    }
     
     IFS0CLR = _IFS0_T4IF_MASK;  // Clear Timer 4 interrupt flag
 }
 
 void __ISR(_TIMER_5_VECTOR, ipl2) Timer5Handler(void) 
 {
-    LATAINV = _LATA_LATA5_MASK; // Toggle RA5 on pin 61, P7 pin 8 (tone 4)
+    if (MilliSeconds >= StopTime[3])
+    {
+        StopTime[3] = 0;
+        LATACLR = _LATA_LATA5_MASK; // Zero RA5 on pin 61, P7 pin 8 (tone 4)
+        IEC0CLR = _IEC0_T5IE_MASK;  // Disable Timer 5 interrupt
+    }
+    else
+    {
+        LATAINV = _LATA_LATA5_MASK; // Toggle RA5 on pin 61, P7 pin 8 (tone 4)
+    }
     
     IFS0CLR = _IFS0_T5IF_MASK;  // Clear Timer 5 interrupt flag
 }
@@ -421,34 +464,39 @@ int SPIbytesPending(void)
 }
 
 
-/* toneT2 --- generate a tone of the given frequency via Timer 2 */
+/* BeginNote --- commence playing a note */
 
-void toneT2(const int freq)
+static void BeginNote(const int channel, const int freq, const int ms)
 {
-    if (freq == 0)
+    const int div = (40000000 / (16 * 2)) / freq;
+    
+    switch (channel)
     {
-        TMR2 = 0x00;                // Clear Timer 2 counter
-        PR2 = 65535u;
-        IEC0CLR = _IEC0_T2IE_MASK;  // Disable Timer 2 interrupt
-    }
-    else
-    {
-        const int div = (40000000 / (16 * 2)) / freq;
+    case 0:
         TMR2 = 0x00;                // Clear Timer 2 counter
         PR2 = div;
+        StopTime[0] = MilliSeconds + (ms - 50);
         IEC0SET = _IEC0_T2IE_MASK;  // Enable Timer 2 interrupt
+        break;
+    case 1:
+        TMR3 = 0x00;                // Clear Timer 3 counter
+        PR3 = div;
+        StopTime[1] = MilliSeconds + (ms - 50);
+        IEC0SET = _IEC0_T3IE_MASK;  // Enable Timer 3 interrupt
+        break;
+    case 2:
+        TMR4 = 0x00;                // Clear Timer 4 counter
+        PR4 = div;
+        StopTime[2] = MilliSeconds + (ms - 50);
+        IEC0SET = _IEC0_T4IE_MASK;  // Enable Timer 4 interrupt
+        break;
+    case 3:
+        TMR5 = 0x00;                // Clear Timer 5 counter
+        PR5 = div;
+        StopTime[3] = MilliSeconds + (ms - 50);
+        IEC0SET = _IEC0_T5IE_MASK;  // Enable Timer 5 interrupt
+        break;
     }
-}
-
-
-/* PlayNote --- play a note */
-
-static void PlayNote(const int freq, const int ms)
-{
-    toneT2(freq);
-    delayms(ms - 50);
-    toneT2(0);
-    delayms(50);
 }
 
 
@@ -557,6 +605,8 @@ static void TRIS_begin(void)
 
 void main(void)
 {
+    int i;
+    
     /* Set up peripherals to match pin connections on PCB */
     PPS_begin();
     
@@ -648,6 +698,11 @@ void main(void)
     IFS0CLR = _IFS0_T5IF_MASK;  // Clear Timer 5 interrupt flag
     IEC0SET = _IEC0_T5IE_MASK;  // Enable Timer 5 interrupt
     
+    for (i = 0; i < 4; i++)
+    {
+        StopTime[i] = 0;
+    }
+    
     __asm__("EI");              // Global interrupt enable
     
     UART4TxByte('\r');
@@ -662,10 +717,17 @@ void main(void)
         LED5 = 1;
         
         // Bar 1
-        PlayNote(E5, 500);
-        PlayNote(E5, 500);
-        PlayNote(F5, 500);
-        PlayNote(G5, 500);
+        BeginNote(0, E5, 500);
+        BeginNote(1, C5, 500);
+        BeginNote(2, G4, 2000);
+        BeginNote(3, C4, 2000);
+        delayms(500);
+        BeginNote(0, E5, 500);
+        delayms(500);
+        BeginNote(0, F5, 500);
+        delayms(500);
+        BeginNote(0, G5, 500);
+        delayms(500);
         
         LED1 = 1;
         LED2 = 0;
@@ -674,10 +736,16 @@ void main(void)
         LED5 = 1;
         
         // Bar 2
-        PlayNote(G5, 500);
-        PlayNote(F5, 500);
-        PlayNote(E5, 500);
-        PlayNote(D5, 500);
+        BeginNote(0, G5, 500);
+        BeginNote(2, G4, 1000);
+        delayms(500);
+        BeginNote(0, F5, 500);
+        delayms(500);
+        BeginNote(0, E5, 500);
+        BeginNote(2, G4, 1000);
+        delayms(500);
+        BeginNote(0, D5, 500);
+        delayms(500);
         
         LED1 = 1;
         LED2 = 1;
@@ -686,10 +754,17 @@ void main(void)
         LED5 = 1;
         
         // Bar 3
-        PlayNote(C5, 500);
-        PlayNote(C5, 500);
-        PlayNote(D5, 500);
-        PlayNote(E5, 500);
+        BeginNote(0, C5, 500);
+        BeginNote(2, E4, 2000);
+        BeginNote(2, G4, 2000);
+        BeginNote(3, C4, 2000);
+        delayms(500);
+        BeginNote(0, C5, 500);
+        delayms(500);
+        BeginNote(0, D5, 500);
+        delayms(500);
+        BeginNote(0, E5, 500);
+        delayms(500);
         
         LED1 = 1;
         LED2 = 1;
@@ -698,9 +773,15 @@ void main(void)
         LED5 = 1;
         
         // Bar 4
-        PlayNote(E5, 750);
-        PlayNote(D5, 250);
-        PlayNote(D5, 1000);
+        BeginNote(0, E5, 750);
+        BeginNote(2, G4, 1000);
+        delayms(750);
+        BeginNote(0, D5, 250);
+        delayms(250);
+        BeginNote(0, D5, 1000);
+        BeginNote(1, B4, 1000);
+        BeginNote(2, G4, 1000);
+        delayms(1000);
         
         LED1 = 1;
         LED2 = 1;
