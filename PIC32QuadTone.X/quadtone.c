@@ -140,7 +140,7 @@ static uint32_t millis(void)
 }
 
 
-void __ISR(_TIMER_1_VECTOR, ipl2) Timer1Handler(void) 
+void __ISR(_TIMER_1_VECTOR, ipl2AUTO) Timer1Handler(void) 
 {
     MilliSeconds++;
     
@@ -149,7 +149,7 @@ void __ISR(_TIMER_1_VECTOR, ipl2) Timer1Handler(void)
     IFS0CLR = _IFS0_T1IF_MASK;  // Clear Timer 1 interrupt flag
 }
 
-void __ISR(_TIMER_2_VECTOR, ipl2) Timer2Handler(void) 
+void __ISR(_TIMER_2_VECTOR, ipl2AUTO) Timer2Handler(void) 
 {
     if (MilliSeconds >= StopTime[0])
     {
@@ -165,7 +165,7 @@ void __ISR(_TIMER_2_VECTOR, ipl2) Timer2Handler(void)
     IFS0CLR = _IFS0_T2IF_MASK;  // Clear Timer 2 interrupt flag
 }
 
-void __ISR(_TIMER_3_VECTOR, ipl2) Timer3Handler(void) 
+void __ISR(_TIMER_3_VECTOR, ipl2AUTO) Timer3Handler(void) 
 {
     if (MilliSeconds >= StopTime[1])
     {
@@ -181,7 +181,7 @@ void __ISR(_TIMER_3_VECTOR, ipl2) Timer3Handler(void)
     IFS0CLR = _IFS0_T3IF_MASK;  // Clear Timer 3 interrupt flag
 }
 
-void __ISR(_TIMER_4_VECTOR, ipl2) Timer4Handler(void) 
+void __ISR(_TIMER_4_VECTOR, ipl2AUTO) Timer4Handler(void) 
 {
     if (MilliSeconds >= StopTime[2])
     {
@@ -197,7 +197,7 @@ void __ISR(_TIMER_4_VECTOR, ipl2) Timer4Handler(void)
     IFS0CLR = _IFS0_T4IF_MASK;  // Clear Timer 4 interrupt flag
 }
 
-void __ISR(_TIMER_5_VECTOR, ipl2) Timer5Handler(void) 
+void __ISR(_TIMER_5_VECTOR, ipl2AUTO) Timer5Handler(void) 
 {
     if (MilliSeconds >= StopTime[3])
     {
@@ -213,7 +213,7 @@ void __ISR(_TIMER_5_VECTOR, ipl2) Timer5Handler(void)
     IFS0CLR = _IFS0_T5IF_MASK;  // Clear Timer 5 interrupt flag
 }
 
-void __ISR(_SPI_3_VECTOR, ipl1) SPI3Handler(void) 
+void __ISR(_SPI_3_VECTOR, ipl1AUTO) SPI3Handler(void) 
 {
     volatile uint32_t junk;
     
@@ -245,7 +245,7 @@ void __ISR(_SPI_3_VECTOR, ipl1) SPI3Handler(void)
     }
 }
 
-void __ISR(_UART_4_VECTOR, ipl1) UART4Handler(void) 
+void __ISR(_UART_4_VECTOR, ipl1AUTO) UART4Handler(void) 
 {
     if (IFS2bits.U4TXIF)
     {
