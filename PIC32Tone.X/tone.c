@@ -5,49 +5,51 @@
  * Created: 2019-01-31 21:12
  */
 
-#include <stdio.h>
-#include <math.h>
-#include <stdlib.h>
-#include <stdbool.h>
 
-// PIC32MX360F512L Configuration Bit Settings
- 
+// PIC32MX550F256L Configuration Bit Settings
+
 // 'C' source line config statements
- 
+
 // DEVCFG3
 // USERID = No Setting
- 
+#pragma config PMDL1WAY = OFF           // Peripheral Module Disable Configuration (Allow multiple reconfigurations)
+#pragma config IOL1WAY = OFF            // Peripheral Pin Select Configuration (Allow multiple reconfigurations)
+#pragma config FUSBIDIO = OFF           // USB USID Selection (Controlled by Port Function)
+#pragma config FVBUSONIO = OFF          // USB VBUS ON Selection (Controlled by Port Function)
+
 // DEVCFG2
 #pragma config FPLLIDIV = DIV_2         // PLL Input Divider (2x Divider)
 #pragma config FPLLMUL = MUL_20         // PLL Multiplier (20x Multiplier)
+#pragma config UPLLIDIV = DIV_4         // USB PLL Input Divider (4x Divider)
+#pragma config UPLLEN = ON              // USB PLL Enable (Enabled)
 #pragma config FPLLODIV = DIV_4         // System PLL Output Clock Divider (PLL Divide by 4)
-#pragma config UPLLIDIV = DIV_4         // 
-#pragma config UPLLEN = ON              // 
- 
+
 // DEVCFG1
-#pragma config FNOSC = PRIPLL           // Oscillator Selection Bits (Fast RC Osc with PLL)
+#pragma config FNOSC = PRIPLL           // Oscillator Selection Bits (Primary Osc w/PLL (XT+,HS+,EC+PLL))
 #pragma config FSOSCEN = OFF            // Secondary Oscillator Enable (Disabled)
 #pragma config IESO = OFF               // Internal/External Switch Over (Disabled)
-#pragma config POSCMOD = HS            // Primary Oscillator Configuration (Primary osc disabled)
-#pragma config OSCIOFNC = OFF            // CLKO Output Signal Active on the OSCO Pin (Enabled)
+#pragma config POSCMOD = HS             // Primary Oscillator Configuration (HS osc mode)
+#pragma config OSCIOFNC = OFF           // CLKO Output Signal Active on the OSCO Pin (Disabled)
 #pragma config FPBDIV = DIV_1           // Peripheral Clock Divisor (Pb_Clk is Sys_Clk/1)
 #pragma config FCKSM = CSDCMD           // Clock Switching and Monitor Selection (Clock Switch Disable, FSCM Disabled)
 #pragma config WDTPS = PS1048576        // Watchdog Timer Postscaler (1:1048576)
+#pragma config WINDIS = OFF             // Watchdog Timer Window Enable (Watchdog Timer is in Non-Window Mode)
 #pragma config FWDTEN = OFF             // Watchdog Timer Enable (WDT Disabled (SWDTEN Bit Controls))
- 
+#pragma config FWDTWINSZ = WINSZ_25     // Watchdog Timer Window Size (Window Size is 25%)
+
 // DEVCFG0
-#pragma config DEBUG = OFF              // Background Debugger Enable (Debugger is disabled)
-#pragma config JTAGEN = OFF             // 
-#pragma config ICESEL = ICS_PGx2        // ICE/ICD Comm Channel Select (ICE EMUC2/EMUD2 pins shared with PGC2/PGD2)
+#pragma config JTAGEN = OFF             // JTAG Enable (JTAG Disabled)
+#pragma config ICESEL = ICS_PGx2        // ICE/ICD Comm Channel Select (Communicate on PGEC2/PGED2)
 #pragma config PWP = OFF                // Program Flash Write Protect (Disable)
 #pragma config BWP = OFF                // Boot Flash Write Protect bit (Protection Disabled)
 #pragma config CP = OFF                 // Code Protect (Protection Disabled)
- 
+
 // #pragma config statements should precede project file includes.
 // Use project enums instead of #define for ON and OFF.
- 
+
 #include <xc.h>
 #include <sys/attribs.h>
+#include <stdbool.h>
 
 #define C5 (523)
 #define D5 (587)
@@ -97,22 +99,6 @@ struct UART_BUFFER
 static struct UART_BUFFER U4Buf;
 
 volatile uint32_t MilliSeconds = 0;
-volatile uint32_t SPIword = 0;
-
-volatile int SPINbytes = 0;
-volatile uint8_t *SPIBuf = NULL;
-volatile int SPIDummyReads = 0;
-
-
-/* dally --- CPU busy-loop for crude time delay */
-
-static void dally(const int loops)
-{
-    volatile int dally;
-    
-    for (dally = 0; dally < loops; dally++)
-        ;
-}
 
 
 /* delayms --- busy-wait delay for given number of milliseconds */
@@ -134,34 +120,7 @@ static uint32_t millis(void)
 }
 
 
-void __ISR(_TIMER_4_VECTOR, ipl4AUTO) Timer4Handler(void) 
-{    
-    static int flag = 0;
-    
-    LATAINV = _LATA_LATA4_MASK; // Toggle P7 pin 6 (22050Hz)
-    
-    LATDCLR = _LATD_LATD9_MASK;   // Assert SS for SPI2
-    
-    SPI2BUF = SPIword;
-    
-    if (flag > 31)
-    {
-        PR4 = 907;
-        flag = 0;
-    }
-    else
-    {
-        PR4 = 906;
-        flag++;
-    }
-    
-    IFS1CLR = _IFS1_SPI2RXIF_MASK;  // Clear SPI2 interrupt flag
-    IEC1SET = _IEC1_SPI2RXIE_MASK;  // Enable SPI2 interrupt
-    
-    IFS0CLR = _IFS0_T4IF_MASK;  // Clear Timer 4 interrupt flag
-}
-
-void __ISR(_TIMER_1_VECTOR, ipl2AUTO) Timer1Handler(void) 
+void __ISR(_TIMER_1_VECTOR, ipl7AUTO) Timer1Handler(void)
 {
     MilliSeconds++;
     
@@ -170,50 +129,8 @@ void __ISR(_TIMER_1_VECTOR, ipl2AUTO) Timer1Handler(void)
     IFS0CLR = _IFS0_T1IF_MASK;  // Clear Timer 1 interrupt flag
 }
 
-void __ISR(_SPI_2_VECTOR, ipl3AUTO) SPI2Handler(void) 
-{
-    volatile uint32_t junk;
-    
-    junk = SPI2BUF;
-    LATDSET = _LATD_LATD9_MASK;
-    
-    IFS1CLR = _IFS1_SPI2RXIF_MASK;  // Clear SPI2 interrupt flag
-    IEC1CLR = _IEC1_SPI2RXIE_MASK;  // Disable SPI2 interrupt
-}
 
-void __ISR(_SPI_3_VECTOR, ipl1AUTO) SPI3Handler(void) 
-{
-    volatile uint32_t junk;
-    
-    if (IFS2 & _IFS2_SPI3RXIF_MASK)
-    {
-        junk = SPI3BUF;
-        SPIDummyReads--;
-        
-        IFS2CLR = _IFS2_SPI3RXIF_MASK;  // Clear SPI3 Rx interrupt flag
-        
-        if (SPIDummyReads == 0)
-        {
-            LATASET = _LATA_LATA0_MASK;
-
-            IEC2CLR = _IEC2_SPI3RXIE_MASK;  // Disable SPI3 Rx interrupt
-        }
-    }
-    else if (IFS2 & _IFS2_SPI3TXIF_MASK)
-    {
-        SPI3BUF = *SPIBuf++;        // Transmit next byte
-        SPINbytes--;
-        
-        IFS2CLR = _IFS2_SPI3TXIF_MASK;  // Clear SPI3 Tx interrupt flag
-        
-        if (SPINbytes == 0)
-        {
-            IEC2CLR = _IEC2_SPI3TXIE_MASK;  // Disable SPI3 Tx interrupt
-        }
-    }
-}
-
-void __ISR(_UART_4_VECTOR, ipl1AUTO) UART4Handler(void) 
+void __ISR(_UART_4_VECTOR, ipl1AUTO) UART4Handler(void)
 {
     if (IFS2bits.U4TXIF)
     {
@@ -307,7 +224,7 @@ static void UART4_begin(const int baud)
     
     U4BRG = (40000000 / (baud * 16)) - 1;
     
-    IPC9bits.U4IP = 1;          // UART4 interrupt priority 1
+    IPC9bits.U4IP = 1;          // UART4 interrupt priority 1 (lowest)
     IPC9bits.U4IS = 2;          // UART4 interrupt sub-priority 2
     
     IFS2CLR = _IFS2_U4TXIF_MASK;  // Clear UART4 Tx interrupt flag
@@ -364,92 +281,6 @@ static void UART5_begin(const int baud)
     U5BRG = (40000000 / (baud * 16)) - 1;
     
     U5MODESET = _U5MODE_ON_MASK;      // Enable USART5
-}
-
-
-static void SPI2_begin(const int baud)
-{
-    SPI2BRG = (20000000 / baud) - 1;
-    SPI2CONbits.MSTEN = 1;  // Master mode
-    SPI2CONbits.MODE16 = 1; // 16-bit mode
-    SPI2CONbits.MODE32 = 0;
-    SPI2CONbits.CKE = 1;
-    SPI2CONbits.STXISEL = 0; // Interrupt on Tx complete
-    SPI2CONbits.SRXISEL = 3; // Interrupt on Rx full
-    
-    TRISDbits.TRISD9 = 0;   // RD9 pin 69, P7 pin 12 as output for SS
-    LATDSET = _LATD_LATD9_MASK;   // De-assert SS for SPI2
-    
-    IPC8bits.SPI2IP = 3;          // SPI2 interrupt priority 3
-    IPC8bits.SPI2IS = 1;          // SPI2 interrupt sub-priority 1
-    IFS1CLR = _IFS1_SPI2TXIF_MASK;  // Clear SPI2 Tx interrupt flag
-    IFS1CLR = _IFS1_SPI2RXIF_MASK;  // Clear SPI2 Rx interrupt flag
-    
-    SPI2CONbits.ON = 1;
-}
-
-static void SPI3_begin(const int baud)
-{    
-    SPI3BRG = (20000000 / baud) - 1;
-    SPI3CONbits.MSTEN = 1;  // Master mode
-    SPI3CONbits.MODE16 = 0; // 8-bit mode
-    SPI3CONbits.MODE32 = 0;
-    SPI3CONbits.CKE = 1;
-    SPI3CONbits.STXISEL = 0; // Interrupt on Tx complete
-    SPI3CONbits.SRXISEL = 3; // Interrupt on Rx full
-    
-    TRISAbits.TRISA0 = 0;   // RA0 pin 17, P1 pin 24 as output for SS
-    LATASET = _LATA_LATA0_MASK;   // De-assert SS for SPI3
-    
-    IPC12bits.SPI3IP = 1;          // SPI3 interrupt priority 1
-    IPC12bits.SPI3IS = 1;          // SPI3 interrupt sub-priority 1
-    IFS2CLR = _IFS2_SPI3TXIF_MASK;  // Clear SPI3 Tx interrupt flag
-    IFS2CLR = _IFS2_SPI3RXIF_MASK;  // Clear SPI3 Rx interrupt flag
-    
-    SPINbytes = 0;
-    SPIDummyReads = 0;
-    SPIBuf = NULL;
-    
-    SPI3CONbits.ON = 1;
-}
-
-
-bool SPIwrite(uint8_t *buf, const int nbytes)
-{
-    if (SPIDummyReads != 0)     // SPI tranmission still in progress?
-    {
-        return (false);
-    }
-    
-    if ((nbytes <= 0) || (buf == NULL))
-    {
-        return (false);
-    }
-    
-    LATACLR = _LATA_LATA0_MASK;   // Assert SS for SPI3
-    
-    SPIBuf = buf;
-    SPINbytes = nbytes;
-    SPIDummyReads = nbytes;
-    
-    SPI3BUF = *SPIBuf++;          // Transmit first byte
-    SPINbytes--;
-    
-    IFS2CLR = _IFS2_SPI3RXIF_MASK;  // Clear SPI3 Rx interrupt flag
-    IEC2SET = _IEC2_SPI3RXIE_MASK;  // Enable SPI3 Rx interrupt
-    
-    if (SPINbytes > 0)
-    {
-        IFS2CLR = _IFS2_SPI3TXIF_MASK;  // Clear SPI3 Tx interrupt flag
-        IEC2SET = _IEC2_SPI3TXIE_MASK;  // Enable SPI3 Tx interrupt
-    }
-    
-    return (true);
-}
-
-int SPIbytesPending(void)
-{
-    return (SPIDummyReads);
 }
 
 
@@ -586,10 +417,6 @@ static void TRIS_begin(void)
 
 void main(void)
 {
-    char buf[32];
-    int i;
-    uint8_t ch;
-    
     /* Set up peripherals to match pin connections on PCB */
     PPS_begin();
     
@@ -611,9 +438,6 @@ void main(void)
     UART4_begin(9600);
     UART5_begin(9600);
     
-    SPI2_begin(2000000);
-    SPI3_begin(1000000);
-    
     /* Configure Timer 2 for tone generation via PWM */
     T2CONbits.TCKPS = 6;        // Timer 2 prescale: 64
     
@@ -628,21 +452,6 @@ void main(void)
     OC2RS = 0;                  // Silent
     
     OC2CONbits.ON = 1;          // Enable OC2 PWM
-    
-    /* Configure Timer 3 for 10-bit PWM */
-    T3CONbits.TCKPS = 6;        // Timer 3 prescale: 64
-    
-    TMR3 = 0x00;                // Clear Timer 3 counter
-    PR3 = 1023;                 // PWM range 0..1023 (10 bits)
-    
-    //T3CONbits.ON = 1;           // Enable Timer 3
-    
-    OC1CONbits.OCTSEL = 1;      // Source: Timer 3
-    OC1CONbits.OCM = 6;         // PWM mode
-    
-    OC1RS = 256;
-    
-    //OC1CONbits.ON = 1;          // Enable OC1 PWM
             
     /* Configure Timer 1 */
     T1CONbits.TCKPS = 0;        // Timer 1 prescale: 1
@@ -652,26 +461,13 @@ void main(void)
     
     T1CONbits.ON = 1;           // Enable Timer 1
     
-    /* Configure Timer 4 */
-    T4CONbits.TCKPS = 0;        // Timer 4 prescale: 1
-    
-    TMR4 = 0x00;                // Clear Timer 4 counter
-    PR4 = 906;                  // Interrupt every 907 ticks (44100Hz)
-    
-    //T4CONbits.ON = 1;           // Enable Timer 4
-    
     /* Configure interrupts */
     INTCONSET = _INTCON_MVEC_MASK; // Multi-vector mode
     
-    IPC1bits.T1IP = 2;          // Timer 1 interrupt priority 2
+    IPC1bits.T1IP = 7;          // Timer 1 interrupt priority 7 (highest)
     IPC1bits.T1IS = 1;          // Timer 1 interrupt sub-priority 1
     IFS0CLR = _IFS0_T1IF_MASK;  // Clear Timer 1 interrupt flag
     IEC0SET = _IEC0_T1IE_MASK;  // Enable Timer 1 interrupt
-    
-    IPC4bits.T4IP = 4;          // Timer 4 interrupt priority 4
-    IPC4bits.T4IS = 1;          // Timer 4 interrupt sub-priority 1
-    IFS0CLR = _IFS0_T4IF_MASK;  // Clear Timer 4 interrupt flag
-    IEC0SET = _IEC0_T4IE_MASK;  // Enable Timer 4 interrupt
     
     __asm__("EI");              // Global interrupt enable
     
