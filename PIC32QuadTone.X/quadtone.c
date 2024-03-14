@@ -116,17 +116,6 @@ volatile uint8_t *SPIBuf = NULL;
 volatile int SPIDummyReads = 0;
 
 
-/* dally --- CPU busy-loop for crude time delay */
-
-static void dally(const int loops)
-{
-    volatile int dally;
-    
-    for (dally = 0; dally < loops; dally++)
-        ;
-}
-
-
 /* delayms --- busy-wait delay for given number of milliseconds */
 
 static void delayms(const uint32_t interval)
