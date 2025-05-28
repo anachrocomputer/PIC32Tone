@@ -1,3 +1,6 @@
+![Static Badge](https://img.shields.io/badge/MCU-PIC32MX-green "MCU:PIC32MX")
+![Static Badge](https://img.shields.io/badge/BOARD-Reach_Dev_PCB-green "BOARD:Reach Dev PCB")
+
 # PIC32Tone #
 
 Play tones on a PIC32MX550F256L dev board.
@@ -30,7 +33,8 @@ LEDs light when the pin is pulled LOW.
 
 ## PIC32 Toolchain ##
 
-MPLAB X V5.20 and 'xc32' V2.15. These are quite old versions now, so I really ought to upgrade!
+MPLAB X V6.05 and 'xc32' V4.30.
+These are not quite the latest versions.
 
 ## PIC32 Programmer ##
 

@@ -3,8 +3,10 @@ PIC32Tone.X/dist
 PIC32Tone.X/nbproject/Makefile-*
 PIC32Tone.X/nbproject/Package-*
 PIC32Tone.X/nbproject/private
+PIC32Tone.X/.generated_files
 PIC32QuadTone.X/build
 PIC32QuadTone.X/dist
 PIC32QuadTone.X/nbproject/Makefile-*
 PIC32QuadTone.X/nbproject/Package-*
 PIC32QuadTone.X/nbproject/private
+PIC32QuadTone.X/.generated_files
